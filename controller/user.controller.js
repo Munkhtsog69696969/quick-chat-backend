@@ -1,6 +1,7 @@
 const User=require("../models/user.model");
 const bcrypt=require("bcrypt");
 const jwt=require("jsonwebtoken");
+const {tokenGenerator}=require("../tokenGenerator")
 
 const { body, validationResult } = require('express-validator');
 
@@ -15,6 +16,8 @@ exports.createNewUser=async(req,res)=>{
 
     const password=req.body.password;
 
+    const role=req.body.role;
+
     const existingUser=await User.findOne({email});
 
     if(existingUser && existingUser!==""){
@@ -25,11 +28,20 @@ exports.createNewUser=async(req,res)=>{
 
             const hash=bcrypt.hashSync(password , salt);
 
-            const newUser=await User.create({username:username , email:email , password:hash});
+            const newUser=await User.create({username:username , email:email , password:hash , role:role});
     
             newUser.save();
     
-            res.send(newUser);
+            // res.send(newUser);
+
+            const accessToken=tokenGenerator({email:email , role:role});
+            
+            if(accessToken && accessToken){
+                // req.headers.authorization=accessToken;
+                // res.send(req.headers);
+                res.send(accessToken)
+            }
+
         } else{
            if(errors.errors[0].param=="email"){
             res.send("Invalid email.");
@@ -47,7 +59,7 @@ exports.createNewUser=async(req,res)=>{
 }
 
 
-exports.loginUser=async(req,res)=>{
+exports.loginUser=async(req,res,next)=>{
     const email=req.body.email;
 
     const password=req.body.password;
@@ -58,21 +70,15 @@ exports.loginUser=async(req,res)=>{
         const matched=await bcrypt.compareSync(password , existingUser.password);
 
         if(matched && matched){
-            const accessToken=jwt.sign(
-                {email:email , id:existingUser._id},
-                process.env.SECRET_TOKEN || "defaultSecret",
-                {expiresIn:"1h"},
-            )
-            // if(accessToken && accessToken){
-            //     req.headers.authorization=accessToken
-            // }
-            // res.send(req.headers)
+            // const accessToken=tokenGenerator({email:existingUser.email , id:existingUser._id});
 
-            if(accessToken && accessToken){
-                res.send(accessToken);
-            }
+            // if(accessToken && accessToken){
+            //     req.headers.authorization=accessToken;
+            //     res.send(req.headers);
+            // }
+            res.send(existingUser)
         }else{
-            res.send("Wrong username or password.")
+            res.send("Wrong email or password.")
         }
     }else{
         res.send("User doesnt exist.");

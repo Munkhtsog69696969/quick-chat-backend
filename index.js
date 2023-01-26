@@ -22,7 +22,10 @@ app.use(express.json());
 
 const userRouter=require("./routes/user.router");
 
+const categoryRouter=require("./routes/category.router")
+
 app.use("/",userRouter);
+app.use("/",categoryRouter)
 
 app.listen(port,()=>{
     console.log("Server listening at:",port);
